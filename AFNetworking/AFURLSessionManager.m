@@ -538,13 +538,13 @@ expectedTotalBytes:(int64_t)expectedTotalBytes {
     NSParameterAssert(downloadTask);
     
     AFURLSessionManagerTaskDelegate *delegate = [AFURLSessionManagerTaskDelegate delegateForManager:self completionHandler:completionHandler];
-    delegate.downloadTaskDidFinishDownloading = ^NSURL * (NSURLSession * __unused session, NSURLSessionDownloadTask *task, NSURL *location) {
-        if (destination) {
+    if (destination) {
+        delegate.downloadTaskDidFinishDownloading = ^NSURL * (NSURLSession * __unused session, NSURLSessionDownloadTask *task, NSURL *location) {
             return destination(location, task.response);
-        }
-
-        return location;
-    };
+        };
+    } else {
+        delegate.downloadTaskDidFinishDownloading = self.downloadTaskDidFinishDownloading;
+    }
 
     if (progress) {
         *progress = delegate.downloadProgress;
