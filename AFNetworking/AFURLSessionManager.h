@@ -368,6 +368,17 @@
  */
 - (void)setDownloadTaskDidFinishDownloadingBlock:(NSURL * (^)(NSURLSession *session, NSURLSessionDownloadTask *downloadTask, NSURL *location))block;
 
+
+
+
+/**
+ Sets a block to be executed when a download task has successfully moved the downloaded file to the URL as provided by setDownloadTaskDidFinishDownloadingBlock.
+ 
+ @param block A block object to be executed when a download task has completed. The block takes three arguments: the session, the download task, and the destination location the downloaded file was moved to.
+ */
+- (void)setDownloadTaskDidMoveToDestinationBlock:(void (^)(NSURLSession *session, NSURLSessionDownloadTask *downloadTask, NSURL *destination))block;
+
+
 /**
  Sets a block to be executed periodically to track download progress, as handled by the `NSURLSessionDownloadDelegate` method `URLSession:downloadTask:didWriteData:totalBytesWritten:totalBytesWritten:totalBytesExpectedToWrite:`.
  

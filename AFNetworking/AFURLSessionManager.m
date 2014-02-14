@@ -86,6 +86,7 @@ typedef NSCachedURLResponse * (^AFURLSessionDataTaskWillCacheResponseBlock)(NSUR
 typedef void (^AFURLSessionDidFinishEventsForBackgroundURLSessionBlock)(NSURLSession *session);
 
 typedef NSURL * (^AFURLSessionDownloadTaskDidFinishDownloadingBlock)(NSURLSession *session, NSURLSessionDownloadTask *downloadTask, NSURL *location);
+typedef void (^AFURLSessionDownloadTaskDidMoveToDestinationBlockBlock)(NSURLSession *session, NSURLSessionDownloadTask *downloadTask, NSURL *location);
 typedef void (^AFURLSessionDownloadTaskDidWriteDataBlock)(NSURLSession *session, NSURLSessionDownloadTask *downloadTask, int64_t bytesWritten, int64_t totalBytesWritten, int64_t totalBytesExpectedToWrite);
 typedef void (^AFURLSessionDownloadTaskDidResumeBlock)(NSURLSession *session, NSURLSessionDownloadTask *downloadTask, int64_t fileOffset, int64_t expectedTotalBytes);
 
@@ -100,6 +101,7 @@ typedef void (^AFURLSessionTaskCompletionHandler)(NSURLResponse *response, id re
 @property (nonatomic, strong) NSProgress *downloadProgress;
 @property (nonatomic, copy) NSURL *downloadFileURL;
 @property (nonatomic, copy) AFURLSessionDownloadTaskDidFinishDownloadingBlock downloadTaskDidFinishDownloading;
+@property (nonatomic, copy) AFURLSessionDownloadTaskDidMoveToDestinationBlockBlock downloadTaskDidMoveToDestination;
 @property (nonatomic, copy) AFURLSessionTaskCompletionHandler completionHandler;
 
 + (instancetype)delegateForManager:(AFURLSessionManager *)manager
@@ -241,6 +243,8 @@ didFinishDownloadingToURL:(NSURL *)location
 
             if (fileManagerError) {
                 [[NSNotificationCenter defaultCenter] postNotificationName:AFURLSessionDownloadTaskDidFailToMoveFileNotification object:downloadTask userInfo:fileManagerError.userInfo];
+            } else if (self.downloadTaskDidMoveToDestination) {
+                self.downloadTaskDidMoveToDestination(session, downloadTask, self.downloadFileURL);
             }
         }
     }
@@ -287,6 +291,7 @@ expectedTotalBytes:(int64_t)expectedTotalBytes {
 @property (readwrite, nonatomic, copy) AFURLSessionDataTaskWillCacheResponseBlock dataTaskWillCacheResponse;
 @property (readwrite, nonatomic, copy) AFURLSessionDidFinishEventsForBackgroundURLSessionBlock didFinishEventsForBackgroundURLSession;
 @property (readwrite, nonatomic, copy) AFURLSessionDownloadTaskDidFinishDownloadingBlock downloadTaskDidFinishDownloading;
+@property (readwrite, nonatomic, copy) AFURLSessionDownloadTaskDidMoveToDestinationBlockBlock downloadTaskDidMoveToDestination;
 @property (readwrite, nonatomic, copy) AFURLSessionDownloadTaskDidWriteDataBlock downloadTaskDidWriteData;
 @property (readwrite, nonatomic, copy) AFURLSessionDownloadTaskDidResumeBlock downloadTaskDidResume;
 @end
@@ -617,6 +622,10 @@ expectedTotalBytes:(int64_t)expectedTotalBytes {
     self.downloadTaskDidFinishDownloading = block;
 }
 
+- (void)setDownloadTaskDidMoveToDestinationBlock:(void (^)(NSURLSession *session, NSURLSessionDownloadTask *downloadTask, NSURL *location))block {
+    self.downloadTaskDidMoveToDestination = block;
+}
+
 - (void)setDownloadTaskDidWriteDataBlock:(void (^)(NSURLSession *session, NSURLSessionDownloadTask *downloadTask, int64_t bytesWritten, int64_t totalBytesWritten, int64_t totalBytesExpectedToWrite))block {
     self.downloadTaskDidWriteData = block;
 }
@@ -847,6 +856,7 @@ didFinishDownloadingToURL:(NSURL *)location
 {
     AFURLSessionManagerTaskDelegate *delegate = [self delegateForTask:downloadTask];
     if (delegate) {
+        delegate.downloadTaskDidMoveToDestination = self.downloadTaskDidMoveToDestination;
         [delegate URLSession:session downloadTask:downloadTask didFinishDownloadingToURL:location];
     } else if (self.downloadTaskDidFinishDownloading) {
         NSURL *fileURL = self.downloadTaskDidFinishDownloading(session, downloadTask, location);
@@ -855,6 +865,8 @@ didFinishDownloadingToURL:(NSURL *)location
             [[NSFileManager defaultManager] moveItemAtURL:location toURL:fileURL error:&error];
             if (error) {
                 [[NSNotificationCenter defaultCenter] postNotificationName:AFURLSessionDownloadTaskDidFailToMoveFileNotification object:downloadTask userInfo:error.userInfo];
+            } else if (self.downloadTaskDidMoveToDestination) {
+                self.downloadTaskDidMoveToDestination(session, downloadTask, fileURL);
             }
         }
     }
