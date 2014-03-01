@@ -540,7 +540,9 @@ expectedTotalBytes:(int64_t)expectedTotalBytes {
                                        destination:(NSURL * (^)(NSURL *targetPath, NSURLResponse *response))destination
                                  completionHandler:(void (^)(NSURLResponse *response, NSURL *filePath, NSError *error))completionHandler
 {
-    NSParameterAssert(downloadTask);
+    if (!downloadTask) {
+        return nil;
+    }
     
     AFURLSessionManagerTaskDelegate *delegate = [AFURLSessionManagerTaskDelegate delegateForManager:self completionHandler:completionHandler];
     if (destination) {
